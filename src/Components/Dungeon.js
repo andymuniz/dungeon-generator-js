@@ -211,13 +211,12 @@ let DungeonGenerator = class {
     for (let i = 0; i < this.trueRooms.length; i++) {
       this.trueRooms[i].expand(1);
     }
-    // ! TODO: this do-while loop causes an infinite loop...
-    // do {
-    //   this.seperateTrueRooms();
-    //   this.seperateCellRectangles();
-    // } while (this.roomsTooClose(5));
-    // this.markAllTileMap(this.rooms);
-    // this.fillSmallCellGaps();
+    do {
+      this.seperateTrueRooms();
+      this.seperateCellRectangles();
+    } while (this.roomsTooClose(5));
+    this.markAllTileMap(this.rooms);
+    this.fillSmallCellGaps();
     // this.constructGraph();
     // {
     //   let dx, dy, x, y;
@@ -271,20 +270,29 @@ let DungeonGenerator = class {
 
   generateCellCoordinates() {
     for (let i = 0; i < this.numCells; i++) {
-      this.rooms.push(new Room(Math.random() * 100, Math.random() * 100));
+      this.rooms.push(
+        new Room(
+          Math.round(Math.random() * 100),
+          Math.round(Math.random() * 100)
+        )
+      );
     }
   }
 
   generateCellRectangles() {
-    let IsDebug = process.env.DEBUG;
+    let IsDebug = true;
 
     //Generate width and length of each Room. Use Parker-Normal Distribution. We want the edges to be even whole numbers.
     for (let i = 0; i < this.rooms.length; i++) {
       let room = this.rooms[i];
-      let height = (myp5.randomGaussian(4.0, 3.0) % this.maxRoomEdgeSize) + 1;
+      let height =
+        Math.round(
+          Math.abs(myp5.randomGaussian(4.0, 3.0)) % this.maxRoomEdgeSize
+        ) + 1;
       if (height % 2 !== 0) height++;
-      let width =
-        Math.random() * (height * 1.5 - height * 0.5) + height * 0.5 + 1;
+      let width = Math.round(
+        Math.random() * (height * 1.5 - height * 0.5) + height * 0.5 + 1
+      );
       if (width % 2 !== 0) width++;
 
       room.setEdgeSizes(height, width);
@@ -307,26 +315,37 @@ let DungeonGenerator = class {
     }
     // Debugging
     if (IsDebug) {
+      heightDist = new Map(
+        [...heightDist.entries()].sort((e1, e2) => e1[0] - e2[0])
+      );
+      widthDist = new Map(
+        [...widthDist.entries()].sort((e1, e2) => e1[0] - e2[0])
+      );
+
       console.log(`-Height distribution-`);
       heightDist.forEach((value, key, map) => {
         console.log(
-          `${key}: ${() => {
+          `${key}: ${(() => {
+            let string = "";
             for (let i = 0; i < value; i++) {
-              return "*";
+              string += "*";
             }
-          }}`
-        );
-      });
-      widthDist.forEach((value, key, map) => {
-        console.log(
-          `${key}: ${() => {
-            for (let i = 0; i < value; i++) {
-              return "*";
-            }
-          }}`
+            return string;
+          })()}`
         );
       });
       console.log(`-Width distribution-`);
+      widthDist.forEach((value, key, map) => {
+        console.log(
+          `${key}: ${(() => {
+            let string = "";
+            for (let i = 0; i < value; i++) {
+              string += "*";
+            }
+            return string;
+          })()}`
+        );
+      });
     }
 
     //Generate "Rectangles" (AABB data) for each room
@@ -337,7 +356,7 @@ let DungeonGenerator = class {
   }
 
   seperateTrueRooms() {
-    let IsDebug = process.env.DEBUG === "true";
+    let IsDebug = true;
 
     let iterations = 0,
       padding = 6;
@@ -355,6 +374,7 @@ let DungeonGenerator = class {
     do {
       if (IsDebug) {
         console.log(`Starting # of iteration: ${iterations}`);
+        iterations++;
       }
 
       touching = false;
@@ -377,10 +397,16 @@ let DungeonGenerator = class {
             if (Math.abs(dx) < Math.abs(dy)) dy = 0;
             else dx = 0;
 
-            dxa = Math.ceil(-dx / 2);
-            dxb = Math.ceil(dx + dxa);
-            dya = Math.ceil(-dy / 2);
-            dyb = Math.ceil(dy + dya);
+            if (dx > 0) dx = Math.ceil(dx);
+            else dx = Math.floor(dx);
+
+            if (dy > 0) dy = Math.ceil(dy);
+            else dy = Math.floor(dy);
+
+            dxa = -dx / 2;
+            dxb = dx + dxa;
+            dya = -dy / 2;
+            dyb = dy + dya;
 
             A.shift(dxa, dya);
             B.shift(dxb, dyb);
@@ -395,7 +421,7 @@ let DungeonGenerator = class {
   }
 
   seperateCellRectangles() {
-    let IsDebug = process.env.DEBUG === "true";
+    let IsDebug = true;
 
     let iterations = 0,
       padding = 0;
@@ -413,6 +439,7 @@ let DungeonGenerator = class {
     do {
       if (IsDebug) {
         console.log(`Starting # of iterations: ${iterations}`);
+        iterations++;
       }
 
       touching = false;
@@ -431,23 +458,29 @@ let DungeonGenerator = class {
               A.getBottom(padding) - B.getTop(padding),
               A.getTop(padding) - B.getBottom(padding)
             );
+
+            if (Math.abs(dx) < Math.abs(dy)) dy = 0;
+            else dx = 0;
+
+            if (dx > 0) dx = Math.ceil(dx);
+            else dx = Math.floor(dx);
+
+            if (dy > 0) dy = Math.ceil(dy);
+            else dy = Math.floor(dy);
+
+            dxa = -dx / 2;
+            dxb = dx + dxa;
+
+            dya = -dy / 2;
+            dyb = dy + dya;
+
+            A.shift(dxa, dya);
+            B.shift(dxb, dyb);
           }
-
-          if (Math.abs(dx) < Math.abs(dy)) dy = 0;
-          else dx = 0;
-
-          dxa = Math.ceil(-dx / 2);
-          dxb = Math.ceil(dx + dxa);
-
-          dya = Math.ceil(-dy / 2);
-          dyb = Math.ceil(dy + dya);
-
-          A.shift(dxa, dya);
-          B.shift(dxb, dyb);
         }
       }
     } while (touching === true);
-    if (IsDebug === true) {
+    if (IsDebug) {
       console.log(`Out of loop.\n# of iterations: ${iterations}`);
     }
   }
@@ -470,16 +503,16 @@ let DungeonGenerator = class {
     for (let x = A.getLeft(); x < A.getRight(); x++) {
       for (let y = A.getBottom(); y < A.getTop(); y++) {
         let pos = [x + 0.5, y + 0.5];
-        if (!this.tileRoomMap.has(pos)) {
-          this.tileRoomMap.set(pos, A);
+        if (!this.tileRoomMap.has(pos.toString())) {
+          this.tileRoomMap.set(pos.toString(), A);
         } else {
-          if (this.tileRoomMap.get(pos).isTrueRoom) {
+          if (this.tileRoomMap.get(pos.toString()).isTrueRoom) {
             continue;
           }
-          if (this.tileRoomMap.get(pos).isCorridorCell) {
+          if (this.tileRoomMap.get(pos.toString()).isCorridorCell) {
             continue;
           }
-          this.tileRoomMap.set(pos, A);
+          this.tileRoomMap.set(pos.toString(), A);
         }
       }
     }
@@ -502,17 +535,18 @@ let DungeonGenerator = class {
   }
 
   fillSmallCellGaps() {
+    // ! TODO: this function is causing an infinite loop. Should change all the positions to be integers or at least multiples of 0.5
     let point = [0, 0];
     this.tileRoomMap.forEach((value, key, map) => {
-      point = key;
+      point = JSON.parse(`[${key}]`);
       let point2 = [0, 0],
         point3 = [0, 0];
 
       //Check for gap above
       point2 = [point[0], point[1] + 1];
       point3 = [point2[0], point2[1] + 1];
-      if (!this.tileRoomMap.has(point2)) {
-        if (!this.tileRoomMap.has(point3)) {
+      if (!this.tileRoomMap.has(point2.toString())) {
+        if (!this.tileRoomMap.has(point3.toString())) {
           this.rooms.push(new Room(point2));
           this.markTileMap(this.rooms[this.rooms.length - 1]);
         }
@@ -523,8 +557,8 @@ let DungeonGenerator = class {
       //Check for gap below
       point2 = [point[0], point[1] - 1];
       point3 = [point2[0], point2[1] - 1];
-      if (!this.tileRoomMap.has(point2)) {
-        if (!this.tileRoomMap.has(point3)) {
+      if (!this.tileRoomMap.has(point2.toString())) {
+        if (!this.tileRoomMap.has(point3.toString())) {
           this.rooms.push(new Room(point2));
           this.markTileMap(this.rooms[this.rooms.length - 1]);
         }
@@ -535,8 +569,8 @@ let DungeonGenerator = class {
       //Check for gap to left
       point2 = [point[0] - 1, point[1]];
       point3 = [point2[0] - 1, point2[1]];
-      if (!this.tileRoomMap.has(point2)) {
-        if (!this.tileRoomMap.has(point3)) {
+      if (!this.tileRoomMap.has(point2.toString())) {
+        if (!this.tileRoomMap.has(point3.toString())) {
           this.rooms.push(new Room(point2));
           this.markTileMap(this.rooms[this.rooms.length - 1]);
         }
@@ -547,8 +581,8 @@ let DungeonGenerator = class {
       //Check for gap to right
       point2 = [point[0] + 1, point[1]];
       point3 = [point2[0] + 1, point2[1]];
-      if (!this.tileRoomMap.has(point2)) {
-        if (!this.tileRoomMap.has(point3)) {
+      if (!this.tileRoomMap.has(point2.toString())) {
+        if (!this.tileRoomMap.has(point3.toString())) {
           this.rooms.push(new Room(point2));
           this.markTileMap(this.rooms[this.rooms.length - 1]);
         }
