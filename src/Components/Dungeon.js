@@ -33,20 +33,28 @@ let Room = class {
     // Assign based on arguments (instead of multiple constructors)
     // TODO: do some checks and assertions and throw errors.
     switch (arguments.length) {
-      case 2: // [], int
+      case 1: // []
         let x = arguments[0][0],
           y = arguments[0][1],
-          z = arguments[1];
+          z = -5;
         this.position = [x, y, z];
         this.isTrueRoom = false;
         this.setEdgeSizes(1, 1);
         this.setAABB();
-        this.isTrueRoom = this.isConnected = this.isCorridorCell = false;
+        this.isTrueRoom = false;
+        this.isConnected = false;
+        this.isCorridorCell = false;
         this.isFillerCell = true;
         break;
-      case 3: // int, int, int
-        this.position = [...arguments];
-        this.isTrueRoom = this.isFillerCell = this.isConnected = this.isCorridorCell = false;
+      case 2: // int, int
+        this.position = [...arguments, -5];
+        // TODO! Original code does not setEdgeSize or setAABB??
+        // this.setEdgeSizes(top - bottom, right - left);
+        // this.setAABB();
+        this.isTrueRoom = false;
+        this.isFillerCell = false;
+        this.isConnected = false;
+        this.isCorridorCell = false;
         break;
       case 4: // int, int, int, int
         let x1 = arguments[0],
@@ -200,76 +208,65 @@ let DungeonGenerator = class {
     this.generateCellCoordinates();
     this.generateCellRectangles();
     this.markTrueRooms();
-
     for (let i = 0; i < this.trueRooms.length; i++) {
       this.trueRooms[i].expand(1);
     }
-
-    do {
-      this.seperateTrueRooms();
-      this.seperateCellRectangles();
-    } while (this.roomsTooClose(5));
-
-    this.markAllTileMap(this.rooms);
-    this.fillSmallCellGaps();
-
-    this.constructGraph();
-
-    {
-      let dx, dy, x, y;
-      let A, B;
-      for (let i = 0; i < this.trueRooms.length; i++) {
-        let outer = this.trueRooms[i];
-        let edges = this.graph.get(outer);
-
-        for (let j = 0; j < edges.length; j++) {
-          let inner = edges[j];
-          if (outer.getPosition()[0] < inner.getPosition()[0]) {
-            A = outer;
-            B = inner;
-          } else {
-            A = inner;
-            B = outer;
-          }
-
-          x = A.getPosition()[0];
-          y = A.getPosition()[1];
-          dx = B.getPosition()[0] - x;
-          dy = B.getPosition()[1] - y;
-
-          if ((Math.random() * 100) % 2 === 1) {
-            this.rooms.push(new Room(x, y, dx + 1, 1));
-            this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
-            this.rooms.push(new Room(x + dx, y, 1, dy));
-            this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
-          } else {
-            this.rooms.push(new Room(x, y + dy, dx + 1, 1));
-            this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
-            this.rooms.push(new Room(x, y, 1, dy));
-            this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
-          }
-        }
-      }
-    }
-
-    for (let i = 0; i < this.corridorRooms.length; i++) {
-      let room = this.corridorRooms[i];
-      room.expand(1);
-    }
-
-    this.removeUntouchedCells();
-
-    for (let i = 0; i < this.rooms.length; i++) {
-      let room = this.rooms[i];
-      if (!room.isConnected) {
-        this.rooms.splice(i, 1);
-      } else {
-        ++i;
-      }
-    }
-
-    this.tileRoomMap.clear();
-    this.markAllTileMap(this.rooms);
+    // ! TODO: this do-while loop causes an infinite loop...
+    // do {
+    //   this.seperateTrueRooms();
+    //   this.seperateCellRectangles();
+    // } while (this.roomsTooClose(5));
+    // this.markAllTileMap(this.rooms);
+    // this.fillSmallCellGaps();
+    // this.constructGraph();
+    // {
+    //   let dx, dy, x, y;
+    //   let A, B;
+    //   for (let i = 0; i < this.trueRooms.length; i++) {
+    //     let outer = this.trueRooms[i];
+    //     let edges = this.graph.get(outer);
+    //     for (let j = 0; j < edges.length; j++) {
+    //       let inner = edges[j];
+    //       if (outer.getPosition()[0] < inner.getPosition()[0]) {
+    //         A = outer;
+    //         B = inner;
+    //       } else {
+    //         A = inner;
+    //         B = outer;
+    //       }
+    //       x = A.getPosition()[0];
+    //       y = A.getPosition()[1];
+    //       dx = B.getPosition()[0] - x;
+    //       dy = B.getPosition()[1] - y;
+    //       if ((Math.random() * 100) % 2 === 1) {
+    //         this.rooms.push(new Room(x, y, dx + 1, 1));
+    //         this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
+    //         this.rooms.push(new Room(x + dx, y, 1, dy));
+    //         this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
+    //       } else {
+    //         this.rooms.push(new Room(x, y + dy, dx + 1, 1));
+    //         this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
+    //         this.rooms.push(new Room(x, y, 1, dy));
+    //         this.corridorRooms.push(this.rooms[this.rooms.length - 1]);
+    //       }
+    //     }
+    //   }
+    // }
+    // for (let i = 0; i < this.corridorRooms.length; i++) {
+    //   let room = this.corridorRooms[i];
+    //   room.expand(1);
+    // }
+    // this.removeUntouchedCells();
+    // for (let i = 0; i < this.rooms.length; i++) {
+    //   let room = this.rooms[i];
+    //   if (!room.isConnected) {
+    //     this.rooms.splice(i, 1);
+    //   } else {
+    //     ++i;
+    //   }
+    // }
+    // this.tileRoomMap.clear();
+    // this.markAllTileMap(this.rooms);
   };
 
   generateCellCoordinates() {
